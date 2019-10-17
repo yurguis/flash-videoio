@@ -442,6 +442,7 @@ import flash.events.ProgressEvent;
 import flash.events.SecurityErrorEvent;
 import flash.events.StatusEvent;
 import flash.events.TimerEvent;
+import flash.external.ExternalInterface;
 import flash.geom.Matrix;
 import flash.media.Camera;
 import flash.media.Microphone;
@@ -1503,7 +1504,7 @@ class VideoIOInternal extends Canvas
 					}
 					if (_cameraObject != null) {
 						_cameraObject.setLoopback(_cameraLoopback);
-						_cameraObject.setMode(_cameraWidth, _cameraHeight, _cameraFPS);
+						_cameraObject.setMode(_cameraWidth, _cameraHeight, _cameraFPS, false);
 						_cameraObject.setQuality(_cameraBandwidth, _cameraQuality);
 						dispatchEvent(new Event("cameraChange"));
 					}
@@ -3081,6 +3082,18 @@ class VideoIOInternal extends Canvas
 		}
 		Security.showSettings(SecurityPanel.PRIVACY);
 	}
+
+	public function testCameraMode(width:int, height:int, fps:int):void
+	{
+		if (_cameraObject != null)
+			_cameraObject.setMode(width, height, fps, false);
+		if (CONFIG::player11) {
+			if (_local != null && _local.videoStreamSettings != null) {
+				_local.videoStreamSettings.setMode(-1, -1, -1);
+			}
+		}
+		showSettings();
+	}
 	
 	//--------------------------------------
 	// PRIVATE METHODS
@@ -3245,6 +3258,15 @@ class VideoIOInternal extends Canvas
 	private function netStatusHandler(event:NetStatusEvent):void 
 	{
 		trace('netStatusHandler() ' + event.type + ' ' + event.info.code);
+
+        if (ExternalInterface.available && ExternalInterface.objectID != null) {
+            var param:Object = {
+                type: event.type,
+                description: event.info.description,
+                code: event.info.code
+            };
+            ExternalInterface.call('onNetStatusChange', param)
+        }
 		
 		switch (event.info.code) {
 		case 'NetConnection.Connect.Success':
